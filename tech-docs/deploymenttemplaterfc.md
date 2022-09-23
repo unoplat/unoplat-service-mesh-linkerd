@@ -6,7 +6,7 @@
 | **Reviewer(s)** | Vipin Kumar, Devendra Singh ; |
 | **Updated** | 2022-09-06 |
 
-## Github CI 
+## Prerequsites
 
 The section should cover the different stages of gihub ci and also should talk about different available triggers for the pipeline.
 
