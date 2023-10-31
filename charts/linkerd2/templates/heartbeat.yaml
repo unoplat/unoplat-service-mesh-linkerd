@@ -3,17 +3,18 @@
 ###
 ### Heartbeat
 ###
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: linkerd-heartbeat
-  namespace: {{.Values.namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: heartbeat
     app.kubernetes.io/part-of: Linkerd
-    app.kubernetes.io/version: {{default .Values.linkerdVersion .Values.controllerImageVersion}}
+    app.kubernetes.io/version: {{.Values.linkerdVersion}}
     linkerd.io/control-plane-component: heartbeat
-    linkerd.io/control-plane-ns: {{.Values.namespace}}
+    linkerd.io/control-plane-ns: {{.Release.Namespace}}
+    {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   annotations:
     {{ include "partials.annotations.created-by" . }}
 spec:
@@ -30,28 +31,37 @@ spec:
         metadata:
           labels:
             linkerd.io/control-plane-component: heartbeat
-            linkerd.io/workload-ns: {{.Values.namespace}}
+            linkerd.io/workload-ns: {{.Release.Namespace}}
             {{- with .Values.podLabels }}{{ toYaml . | trim | nindent 12 }}{{- end }}
           annotations:
             {{ include "partials.annotations.created-by" . }}
             {{- with .Values.podAnnotations }}{{ toYaml . | trim | nindent 12 }}{{- end }}
         spec:
+          {{- if .Values.priorityClassName }}
+          priorityClassName: {{ .Values.priorityClassName }}
+          {{- end -}}
+          {{- with .Values.runtimeClassName }}
+          runtimeClassName: {{ . | quote }}
+          {{- end }}
           {{- if .Values.tolerations -}}
           {{- include "linkerd.tolerations" . | nindent 10 }}
           {{- end -}}
           {{- include "linkerd.node-selector" . | nindent 10 }}
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
           serviceAccountName: linkerd-heartbeat
           restartPolicy: Never
           containers:
           - name: heartbeat
-            image: {{.Values.controllerImage}}:{{default .Values.linkerdVersion .Values.controllerImageVersion}}
+            image: {{.Values.controllerImage}}:{{.Values.linkerdVersion}}
             imagePullPolicy: {{.Values.imagePullPolicy}}
             env:
             - name: LINKERD_DISABLED
               value: "the heartbeat controller does not use the proxy"
             args:
             - "heartbeat"
-            - "-controller-namespace={{.Values.namespace}}"
+            - "-controller-namespace={{.Release.Namespace}}"
             - "-log-level={{.Values.controllerLogLevel}}"
             - "-log-format={{.Values.controllerLogFormat}}"
             - "-prometheus-url=http://prometheus.linkerd-viz.svc.{{.Values.clusterDomain}}:9090"
@@ -59,5 +69,13 @@ spec:
             {{- include "partials.resources" .Values.heartbeatResources | nindent 12 }}
             {{- end }}
             securityContext:
+              capabilities:
+                drop:
+                - ALL
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
               runAsUser: {{.Values.controllerUID}}
+              allowPrivilegeEscalation: false
+              seccompProfile:
+                type: RuntimeDefault
 {{- end }}

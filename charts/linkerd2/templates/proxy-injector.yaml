@@ -5,7 +5,7 @@
 {{- $tree := deepCopy . }}
 {{ $_ := set $tree.Values.proxy "workloadKind" "deployment" -}}
 {{ $_ := set $tree.Values.proxy "component" "linkerd-proxy-injector" -}}
-{{ include "linkerd.proxy.validation" .Values.proxy -}}
+{{ $_ := set $tree.Values.proxy "waitBeforeExitSeconds" 0 -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,27 +14,24 @@ metadata:
   labels:
     app.kubernetes.io/name: proxy-injector
     app.kubernetes.io/part-of: Linkerd
-    app.kubernetes.io/version: {{default .Values.linkerdVersion .Values.controllerImageVersion}}
+    app.kubernetes.io/version: {{.Values.linkerdVersion}}
     linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: {{.Values.namespace}}
+    linkerd.io/control-plane-ns: {{.Release.Namespace}}
+    {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   name: linkerd-proxy-injector
-  namespace: {{.Values.namespace}}
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: {{.Values.controllerReplicas}}
   selector:
     matchLabels:
       linkerd.io/control-plane-component: proxy-injector
-  {{- if .Values.enablePodAntiAffinity }}
+  {{- if .Values.deploymentStrategy }}
   strategy:
-    rollingUpdate:
-      maxUnavailable: 1
+    {{- with .Values.deploymentStrategy }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   {{- end }}
   template:
     metadata:
       annotations:
-        {{- if (or (empty .Values.cliVersion) (not (eq (.Values.stage | toString) "control-plane"))) }}
-        checksum/config: {{ include (print $.Template.BasePath "/proxy-injector-rbac.yaml") . | sha256sum }}
-        {{- end }}
         {{ include "partials.annotations.created-by" . }}
         {{- include "partials.proxy.annotations" . | nindent 8}}
         {{- with .Values.podAnnotations }}{{ toYaml . | trim | nindent 8 }}{{- end }}
@@ -42,25 +39,26 @@ spec:
         config.linkerd.io/default-inbound-policy: "all-unauthenticated"
       labels:
         linkerd.io/control-plane-component: proxy-injector
-        linkerd.io/control-plane-ns: {{.Values.namespace}}
-        linkerd.io/workload-ns: {{.Values.namespace}}
+        linkerd.io/control-plane-ns: {{.Release.Namespace}}
+        linkerd.io/workload-ns: {{.Release.Namespace}}
         {{- include "partials.proxy.labels" $tree.Values.proxy | nindent 8}}
         {{- with .Values.podLabels }}{{ toYaml . | trim | nindent 8 }}{{- end }}
     spec:
+      {{- with .Values.runtimeClassName }}
+      runtimeClassName: {{ . | quote }}
+      {{- end }}
       {{- if .Values.tolerations -}}
       {{- include "linkerd.tolerations" . | nindent 6 }}
       {{- end -}}
       {{- include "linkerd.node-selector" . | nindent 6 }}
-      {{- if .Values.enablePodAntiAffinity -}}
-      {{- $local := dict "component" "proxy-injector" "label" -}}
-      {{- include "linkerd.pod-affinity" $local | nindent 6 -}}
-      {{- end }}
+      {{- $_ := set $tree "component" "proxy-injector" -}}
+      {{- include "linkerd.affinity" $tree | nindent 6 }}
       containers:
       {{- if not (empty .Values.proxyInjectorProxyResources) }}
       {{- $r := merge .Values.proxyInjectorProxyResources .Values.proxy.resources }}
       {{- $_ := set $tree.Values.proxy "resources" $r }}
       {{- end }}
-      {{- $_ := set $tree.Values.proxy "await" true }}
+      {{- $_ := set $tree.Values.proxy "await" $tree.Values.proxy.await }}
       {{- $_ := set $tree.Values.proxy "loadTrustBundleFromConfigMap" true }}
       {{- $_ := set $tree.Values.proxy "podInboundPorts" "8443,9995" }}
       {{- /*
@@ -68,13 +66,17 @@ spec:
         cluster network.
       */}}
       {{- $_ := set $tree.Values.proxy "defaultInboundPolicy" "all-unauthenticated" }}
+      {{- $_ := set $tree.Values.proxy "capabilities" (dict "drop" (list "ALL")) }}
+      {{- $_ := set $tree.Values.proxy "outboundDiscoveryCacheUnusedTimeout" "5s" }}
+      {{- $_ := set $tree.Values.proxy "inboundDiscoveryCacheUnusedTimeout" "90s" }}
       - {{- include "partials.proxy" $tree | indent 8 | trimPrefix (repeat 7 " ") }}
       - args:
         - proxy-injector
         - -log-level={{.Values.controllerLogLevel}}
         - -log-format={{.Values.controllerLogFormat}}
+        - -linkerd-namespace={{.Release.Namespace}}
         - -enable-pprof={{.Values.enablePprof | default false}}
-        image: {{.Values.controllerImage}}:{{default .Values.linkerdVersion .Values.controllerImageVersion}}
+        image: {{.Values.controllerImage}}:{{.Values.linkerdVersion}}
         imagePullPolicy: {{.Values.imagePullPolicy}}
         livenessProbe:
           httpGet:
@@ -96,7 +98,15 @@ spec:
         {{- include "partials.resources" .Values.proxyInjectorResources | nindent 8 }}
         {{- end }}
         securityContext:
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
           runAsUser: {{.Values.controllerUID}}
+          allowPrivilegeEscalation: false
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - mountPath: /var/run/linkerd/config
           name: config
@@ -105,10 +115,23 @@ spec:
         - mountPath: /var/run/linkerd/tls
           name: tls
           readOnly: true
-      {{ if not .Values.cniEnabled -}}
       initContainers:
+      {{ if .Values.cniEnabled -}}
+      - {{- include "partials.network-validator" $tree | indent 8 | trimPrefix (repeat 7 " ") }}
+      {{ else -}}
+      {{- /*
+        The controller needs to connect to the Kubernetes API. There's no reason
+        to put the proxy in the way of that.
+      */}}
+      {{- $_ := set $tree.Values.proxyInit "ignoreOutboundPorts" .Values.proxyInit.kubeAPIServerPorts -}}
       - {{- include "partials.proxy-init" $tree | indent 8 | trimPrefix (repeat 7 " ") }}
       {{ end -}}
+      {{- if .Values.priorityClassName -}}
+      priorityClassName: {{ .Values.priorityClassName }}
+      {{ end -}}
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: linkerd-proxy-injector
       volumes:
       - configMap:
@@ -123,16 +146,20 @@ spec:
       {{ if not .Values.cniEnabled -}}
       - {{- include "partials.proxyInit.volumes.xtables" . | indent 8 | trimPrefix (repeat 7 " ") }}
       {{ end -}}
+      {{if .Values.identity.serviceAccountTokenProjection -}}
+      - {{- include "partials.proxy.volumes.service-account-token" . | indent 8 | trimPrefix (repeat 7 " ") }}
+      {{ end -}}
       - {{- include "partials.proxy.volumes.identity" . | indent 8 | trimPrefix (repeat 7 " ") }}
 ---
 kind: Service
 apiVersion: v1
 metadata:
   name: linkerd-proxy-injector
-  namespace: {{.Values.namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: {{.Values.namespace}}
+    linkerd.io/control-plane-ns: {{.Release.Namespace}}
+    {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   annotations:
     {{ include "partials.annotations.created-by" . }}
     config.linkerd.io/opaque-ports: "443"
@@ -144,16 +171,17 @@ spec:
   - name: proxy-injector
     port: 443
     targetPort: proxy-injector
-{{- if .Values.enablePodAntiAffinity }}
+{{- if .Values.enablePodDisruptionBudget }}
 ---
 kind: PodDisruptionBudget
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 metadata:
   name: linkerd-proxy-injector
-  namespace: {{.Values.namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     linkerd.io/control-plane-component: proxy-injector
-    linkerd.io/control-plane-ns: {{.Values.namespace}}
+    linkerd.io/control-plane-ns: {{.Release.Namespace}}
+    {{- with .Values.commonLabels }}{{ toYaml . | trim | nindent 4 }}{{- end }}
   annotations:
     {{ include "partials.annotations.created-by" . }}
 spec:

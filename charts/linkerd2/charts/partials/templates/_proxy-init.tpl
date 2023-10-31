@@ -1,5 +1,13 @@
 {{- define "partials.proxy-init" -}}
 args:
+{{- if (.Values.proxyInit.iptablesMode | default "legacy" | eq "nft") }}
+- --firewall-bin-path
+- "iptables-nft"
+- --firewall-save-bin-path
+- "iptables-nft-save"
+{{- else if not (eq .Values.proxyInit.iptablesMode "legacy") }}
+{{ fail (printf "Unsupported value \"%s\" for proxyInit.iptablesMode\nValid values: [\"nft\", \"legacy\"]" .Values.proxyInit.iptablesMode) }}
+{{- end }}
 - --incoming-proxy-port
 - {{.Values.proxy.ports.inbound | quote}}
 - --outgoing-proxy-port
@@ -33,7 +41,7 @@ imagePullPolicy: {{.Values.proxyInit.image.pullPolicy | default .Values.imagePul
 name: linkerd-init
 {{ include "partials.resources" .Values.proxyInit.resources }}
 securityContext:
-  {{- if or .Values.proxyInit.closeWaitTimeoutSecs .Values.proxyInit.runAsRoot }}
+  {{- if or .Values.proxyInit.closeWaitTimeoutSecs .Values.proxyInit.privileged }}
   allowPrivilegeEscalation: true
   {{- else }}
   allowPrivilegeEscalation: false
@@ -50,19 +58,21 @@ securityContext:
     {{- include "partials.proxy-init.capabilities.drop" . | nindent 4 -}}
     {{- end }}
     {{- end }}
-  {{- if or .Values.proxyInit.closeWaitTimeoutSecs .Values.proxyInit.runAsRoot }}
-  {{- if .Values.proxyInit.closeWaitTimeoutSecs }}
+  {{- if or .Values.proxyInit.closeWaitTimeoutSecs .Values.proxyInit.privileged }}
   privileged: true
   {{- else }}
   privileged: false
   {{- end }}
+  {{- if .Values.proxyInit.runAsRoot }}
   runAsNonRoot: false
   runAsUser: 0
   {{- else }}
-  privileged: false
   runAsNonRoot: true
+  runAsUser: {{ .Values.proxyInit.runAsUser | int | eq 0 | ternary 65534 .Values.proxyInit.runAsUser }}
   {{- end }}
   readOnlyRootFilesystem: true
+  seccompProfile:
+    type: RuntimeDefault
 terminationMessagePolicy: FallbackToLogsOnError
 {{- if or (not .Values.cniEnabled) .Values.proxyInit.saMountPath }}
 volumeMounts:

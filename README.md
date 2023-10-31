@@ -32,12 +32,13 @@ curl --proto '=https' --tlsv1.2 -sSfL https://run.linkerd.io/install | sh
 1. kubectl annotate namespace unoplat-service-mesh linkerd.io/inject=disabled
 2. helm repo add linkerd https://helm.linkerd.io/stable
 3. helm repo update
-4. helm install unoplat-linkerd-crds linkerd/linkerd-crds -n linkerd --create-namespace
-5. helm install unoplat-linkerd-control-plane -n unoplat-service-mesh \
+4. helm install unoplat-linkerd-crds linkerd/linkerd-crds -n unoplat-service-mesh --version 1.8.0
+5. helm install unoplat-linkerd-control-plane . -n unoplat-service-mesh \
   --set-file identityTrustAnchorsPEM=root.crt \
   --set-file identity.issuer.tls.crtPEM=issuer.crt \
   --set-file identity.issuer.tls.keyPEM=issuer.key \
   --set cniEnabled=true \
-  linkerd/linkerd-control-plane
+  -f values.yaml \
+  -f values-ha.yaml
 
 ##  
