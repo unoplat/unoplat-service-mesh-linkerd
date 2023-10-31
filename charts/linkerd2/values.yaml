@@ -62,7 +62,7 @@ policyController:
   # -- The default allow policy to use when no `Server` selects a pod.  One of: "all-authenticated",
   # "all-unauthenticated", "cluster-authenticated", "cluster-unauthenticated", "deny"
   # @default -- "all-unauthenticated"
-  defaultAllowPolicy: "all-unauthenticated"
+  defaultAllowPolicy: "deny"
 
   # -- Log level for the policy controller
   logLevel: linkerd=info,warn
