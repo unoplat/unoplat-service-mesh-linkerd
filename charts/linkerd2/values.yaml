@@ -35,7 +35,7 @@ enablePprof: false
 # -- enabling this omits the NET_ADMIN capability in the PSP
 # and the proxy-init container when injecting the proxy;
 # requires the linkerd-cni plugin to already be installed
-cniEnabled: false
+cniEnabled: true
 # -- Trust root certificate (ECDSA). It must be provided during install.
 identityTrustAnchorsPEM: |
 # -- Trust domain used for identity
