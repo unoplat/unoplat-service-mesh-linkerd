@@ -18,21 +18,23 @@ curl --proto '=https' --tlsv1.2 -sSfL https://run.linkerd.io/install | sh
 6. helm repo update
 7. helm install \
   cert-manager jetstack/cert-manager \
-  --namespace cert-manager \
+  --namespace unoplat-service-mesh \
   --create-namespace \
   --version v1.13.1 \
   --set installCRDs=true
-8.  kubectl wait --for=condition=available --timeout=2m -n cert-manager deployment/cert-manager deployment/cert-manager-cainjector deployment/cert-manager-webhook
-9. 
+8. kubectl create secret tls unoplat-service-mesh-ca-secret --cert=root.crt --key=root.key -n unoplat-service-mesh
+9. kubectl create -f code/base-project/cluster-issuer.yaml -n unoplat-service-mesh
+10. kubectl create -f code/base-project/certificate.yaml -n unoplat-service-mesh
+
 
 ## Linkerd installation
 
-1. helm repo add linkerd https://helm.linkerd.io/stable
-2. helm repo update
-3. helm install linkerd-cni -n linkerd-cni --create-namespace linkerd/linkerd2-cni
-4. helm install linkerd-crds linkerd/linkerd-crds -n linkerd --create-namespace
-5. helm install linkerd-control-plane -n linkerd \
-  --set-file identityTrustAnchorsPEM=ca.crt \
+1. kubectl annotate namespace unoplat-service-mesh linkerd.io/inject=disabled
+2. helm repo add linkerd https://helm.linkerd.io/stable
+3. helm repo update
+4. helm install unoplat-linkerd-crds linkerd/linkerd-crds -n linkerd --create-namespace
+5. helm install unoplat-linkerd-control-plane -n unoplat-service-mesh \
+  --set-file identityTrustAnchorsPEM=root.crt \
   --set-file identity.issuer.tls.crtPEM=issuer.crt \
   --set-file identity.issuer.tls.keyPEM=issuer.key \
   --set cniEnabled=true \
