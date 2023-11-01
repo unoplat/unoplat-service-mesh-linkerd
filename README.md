@@ -33,12 +33,13 @@ curl --proto '=https' --tlsv1.2 -sSfL https://run.linkerd.io/install | sh
 2. helm repo add linkerd https://helm.linkerd.io/stable
 3. helm repo update
 4. helm install unoplat-linkerd-crds linkerd/linkerd-crds -n unoplat-service-mesh --version 1.8.0
-5. helm install unoplat-linkerd-control-plane . -n unoplat-service-mesh \
+5. helm install unoplat-linkerd-cni -n unoplat-service-mesh linkerd/linkerd2-cni
+6. helm install unoplat-linkerd-control-plane . -n unoplat-service-mesh \
   --set-file identityTrustAnchorsPEM=root.crt \
   --set-file identity.issuer.tls.crtPEM=issuer.crt \
   --set-file identity.issuer.tls.keyPEM=issuer.key \
-  --set cniEnabled=true \
+  --set cniEnabled=false \
   -f values.yaml \
   -f values-ha.yaml
-
+7. install cli ->  curl -sL https://run.linkerd.io/install | sh
 ##  
