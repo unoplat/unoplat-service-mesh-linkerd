@@ -1,0 +1,49 @@
+name: Merge with develop branch
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - develop
+  workflow_dispatch:  
+
+jobs:
+  dev-pr-merge:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout our repository
+      uses: actions/checkout@v2
+      with:
+        ref: develop
+        fetch-depth: 0 
+    
+    - name: Configure Git
+      run: |
+        git config user.name "$GITHUB_ACTOR"
+        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"  
+    
+    - name: Set up Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: v3.11.1
+
+    - name: Developer Values YAML
+      run: |
+        cp -f charts/linkerd2/environments/dev/values.yaml charts/linkerd2/
+
+    - name: Save current changes for client-cluster-values.yaml
+      run: |
+         git diff --exit-code charts/linkerd2/values.yaml || (git add charts/linkerd2/values.yaml && git commit -m "updated dev values" && git push origin develop)
+    
+    - name: Run chart-releaser
+      uses: helm/chart-releaser-action@v1.5.0
+      with:
+        charts_dir: charts
+      env:
+        CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      
+
+        
