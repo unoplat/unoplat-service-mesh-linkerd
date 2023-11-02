@@ -27,7 +27,7 @@ jobs:
 
     - name: fetch upstream linkerd control pane latest charts
       run: |
-        LATEST_VERSION=$(helm search repo linkerd --versions | grep linkerd/linkerd  | head -1 | awk '{print $2}')
+        LATEST_VERSION=$(helm search repo linkerd --versions | grep linkerd/linkerd-control-plane  | head -1 | awk '{print $2}')
         echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
         
     - name: Compare versions and create new branch if necessary
@@ -39,7 +39,7 @@ jobs:
           git checkout -b upstream-sync-${LATEST_VERSION}
           git push origin upstream-sync-${LATEST_VERSION}
           rm -rf charts/linkerd-control-plane/
-          helm fetch --untar --untardir tmp-charts/ linkerd/linkerd-control-plane --version $LATEST_VERSION
+          helm fetch --untar --untardir charts/ linkerd/linkerd-control-plane --version $LATEST_VERSION
           echo "NEW_BRANCH_CREATED=true" >> $GITHUB_ENV
         fi     
     - name: Helm Chart Scan
