@@ -32,11 +32,11 @@ jobs:
 
     - name: Developer Values YAML
       run: |
-        cp -f charts/linkerd2/environments/dev/values.yaml charts/linkerd2/
+        cp -f charts/linkerd-control-plane/environments/dev/values.yaml charts/linkerd-control-plane/
 
     - name: Save current changes for client-cluster-values.yaml
       run: |
-         git diff --exit-code charts/linkerd2/values.yaml || (git add charts/linkerd2/values.yaml && git commit -m "updated dev values" && git push origin develop)
+         git diff --exit-code charts/linkerd-control-plane/values.yaml || (git add charts/linkerd-control-plane/values.yaml && git commit -m "updated dev values" && git push origin develop)
     
     - name: Run chart-releaser
       uses: helm/chart-releaser-action@v1.5.0
