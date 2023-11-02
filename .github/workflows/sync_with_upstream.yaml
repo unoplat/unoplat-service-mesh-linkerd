@@ -1,0 +1,92 @@
+name: Update Linkerd
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update-values:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout our repository
+      uses: actions/checkout@v3
+      with:
+        ref: develop
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: v3.11.1
+
+    - name: Add cert manager Helm repository
+      run: |
+        helm repo add linkerd https://helm.linkerd.io/stable
+        helm repo update
+
+    - name: fetch upstream linkerd control pane latest charts
+      run: |
+        LATEST_VERSION=$(helm search repo linkerd --versions | grep linkerd/linkerd-control-plane  | head -1 | awk '{print $2}')
+        echo "LATEST_VERSION=$LATEST_VERSION" >> $GITHUB_ENV
+        
+    - name: Compare versions and create new branch if necessary
+      run: |
+        CURRENT_VERSION=$(cat charts/upstream-version.json | jq -r '.["linkerd-control-pane"]')
+        if [ "$LATEST_VERSION" != "$CURRENT_VERSION" ]; then
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"       
+          git checkout -b upstream-sync-${LATEST_VERSION}
+          git push origin upstream-sync-${LATEST_VERSION}
+          rm -rf charts/linkerd-control-plane/
+          helm fetch --untar --untardir charts/ linkerd/linkerd-control-plane --version $LATEST_VERSION
+          echo "NEW_BRANCH_CREATED=true" >> $GITHUB_ENV
+        fi     
+    - name: Helm Chart Scan
+      if: env.NEW_BRANCH_CREATED == 'true'
+      uses: kubescape/github-action@main  
+      continue-on-error: true
+      with:
+        format: sarif
+        outputFile: helm_results
+        files: "charts/linkerd-control-plane"
+
+    - name: Upload Kubescape scan results to Github Code Scanning
+      if: env.NEW_BRANCH_CREATED == 'true'
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: helm_results.sarif  
+        category: "Kubescape scan for Helm Charts"
+
+    - name: Moving scan results to appropriate folders
+      if: env.NEW_BRANCH_CREATED == 'true'
+      run: |
+        TIMESTAMP=$(date -u +%Y%m%d%H%M%S)
+        echo "Moving helm_results.sarif to reports/kubernetes-nsa-cisa-yaml-scan-analysis/helm_results_${TIMESTAMP}.sarif"
+        mv -f "helm_results.sarif" "reports/kubernetes-nsa-cisa-yaml-scan-analysis/helm_results_${TIMESTAMP}.sarif"
+
+    - name: Push changes to our repository
+      if: env.NEW_BRANCH_CREATED == 'true'
+      run: |
+        git config --global user.name "GitHub Action"
+        git config --global user.email "action@github.com"
+        git add charts/*
+        git add reports/*
+        git commit -m "added charts and scan results"
+
+    - name: Push changes
+      if: env.NEW_BRANCH_CREATED == 'true'
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: upstream-sync-${{ env.LATEST_VERSION }}
+
+    - name: Create Pull Request
+      if: env.NEW_BRANCH_CREATED == 'true'
+      uses: peter-evans/create-pull-request@v3
+      with:
+        title: 'Sync with Upstream: ${{ env.LATEST_VERSION }}'
+        commit-message: 'Changes Detected'
+        branch: 'upstream-sync-${{ env.LATEST_VERSION }}'
+        base: 'develop'
+        token: ${{ secrets.GITHUB_TOKEN }}    
