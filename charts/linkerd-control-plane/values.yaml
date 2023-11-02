@@ -221,7 +221,7 @@ proxyInit:
   resources:
     cpu:
       # -- Maximum amount of CPU units that the proxy-init container can use
-      limit: 100m
+      limit: 200m
       # -- Amount of CPU units that the proxy-init container requests
       request: 100m
     memory:
@@ -528,7 +528,7 @@ nodeSelector:
 # Prometheus Operator PodMonitor configuration
 podMonitor:
   # -- Enables the creation of Prometheus Operator [PodMonitor](https://prometheus-operator.dev/docs/operator/api/#monitoring.coreos.com/v1.PodMonitor)
-  enabled: false
+  enabled: true
   # -- Interval at which metrics should be scraped
   scrapeInterval: 10s
   # -- Iimeout after which the scrape is ended
