@@ -2,7 +2,7 @@ apiVersion: v2
 appVersion: stable-2.14.2
 dependencies:
 - name: partials
-  repository: file://home/runner/work/unoplat-service-mesh-linkerd/charts/linkerd-control-plane/charts/partials
+  repository: file://charts/
   version: 0.1.0
 description: 'Linkerd gives you observability, reliability, and security for your
   microservices — with no code change required. '
