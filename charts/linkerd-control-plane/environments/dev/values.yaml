@@ -140,11 +140,11 @@ proxy:
   # -- The `cpu.limit` and `cores` should be kept in sync. The value of `cores`
   # must be an integer and should typically be set by rounding up from the
   # limit. E.g. if cpu.limit is '1500m', cores should be 2.
-  cores: 0
+  cores: 1
   resources:
     cpu:
       # -- Maximum amount of CPU units that the proxy can use
-      limit: ""
+      limit: "1000m"
       # -- Amount of CPU units that the proxy requests
       request: ""
     memory:
