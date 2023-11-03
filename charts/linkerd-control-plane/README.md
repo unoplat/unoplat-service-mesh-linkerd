@@ -1,4 +1,4 @@
-# linkerd-control-plane
+#  linkerd-control-plane
 
 Linkerd gives you observability, reliability, and security
 for your microservices — with no code change required.
