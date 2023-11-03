@@ -19,4 +19,4 @@ name: linkerd-control-plane
 sources:
 - https://github.com/linkerd/linkerd2/
 type: application
-version: 1.16.4-dev
+version: 1.16.5-dev
