@@ -56,4 +56,5 @@ jobs:
         echo "$DECRYPTED_ISSUER_KEY" > decrypted_issuer.key
         echo "$ISSUER_CRT" > issuer.crt
         version=$(helm search repo unoplat-service-mesh-linkerd/linkerd-control-plane --versions --devel --output json | jq -r '.[0].version')
+        helm install linkerd-crds linkerd/linkerd-crds -n unoplat-service-mesh --version 1.8.0
         helm upgrade --install linkerd --namespace unoplat-service-mesh unoplat-service-mesh-linkerd/linkerd-control-plane --set-file identityTrustAnchorsPEM=root.crt --set-file identity.issuer.tls.crtPEM=issuer.crt --set-file identity.issuer.tls.keyPEM=decrypted_issuer.key --set cniEnabled=false --version $version --devel --create-namespace
