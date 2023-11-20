@@ -1,8 +1,8 @@
 apiVersion: v2
-appVersion: stable-2.14.2
+appVersion: stable-2.14.4
 dependencies:
 - name: partials
-  repository: file://charts/partials
+  repository: file://../partials
   version: 0.1.0
 description: 'Linkerd gives you observability, reliability, and security for your
   microservices — with no code change required. '
@@ -19,4 +19,4 @@ name: linkerd-control-plane
 sources:
 - https://github.com/linkerd/linkerd2/
 type: application
-version: 1.16.5-dev
+version: 1.16.5
