@@ -3,6 +3,32 @@ entries:
   linkerd-control-plane:
   - apiVersion: v2
     appVersion: stable-2.14.2
+    created: "2023-12-05T14:44:06.63709194Z"
+    dependencies:
+    - name: partials
+      repository: file://charts/partials
+      version: 0.1.0
+    description: 'Linkerd gives you observability, reliability, and security for your
+      microservices — with no code change required. '
+    digest: f58e07d757dab1d7956afbd1224f1a3f26d3b1b1c4778da1a7a77bae637d6a84
+    home: https://linkerd.io
+    icon: https://linkerd.io/images/logo-only-200h.png
+    keywords:
+    - service-mesh
+    kubeVersion: '>=1.21.0-0'
+    maintainers:
+    - email: cncf-linkerd-dev@lists.cncf.io
+      name: Linkerd authors
+      url: https://linkerd.io/
+    name: linkerd-control-plane
+    sources:
+    - https://github.com/linkerd/linkerd2/
+    type: application
+    urls:
+    - https://github.com/unoplat/unoplat-service-mesh-linkerd/releases/download/linkerd-control-plane-1.16.6-dev/linkerd-control-plane-1.16.6-dev.tgz
+    version: 1.16.6-dev
+  - apiVersion: v2
+    appVersion: stable-2.14.2
     created: "2023-11-03T10:30:49.999686364Z"
     dependencies:
     - name: partials
@@ -27,4 +53,4 @@ entries:
     urls:
     - https://github.com/unoplat/unoplat-service-mesh-linkerd/releases/download/linkerd-control-plane-1.16.5-dev/linkerd-control-plane-1.16.5-dev.tgz
     version: 1.16.5-dev
-generated: "2023-11-03T10:30:49.999697664Z"
+generated: "2023-12-05T14:44:06.637105055Z"
