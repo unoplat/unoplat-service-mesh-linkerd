@@ -144,9 +144,9 @@ proxy:
   resources:
     cpu:
       # -- Maximum amount of CPU units that the proxy can use
-      limit: "1000m"
+      limit: "200m"
       # -- Amount of CPU units that the proxy requests
-      request: ""
+      request: "50m"
     memory:
       # -- Maximum amount of memory that the proxy can use
       limit: ""
