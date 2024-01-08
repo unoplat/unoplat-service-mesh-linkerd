@@ -1,9 +1,9 @@
-#  linkerd-control-plane
+# linkerd-control-plane
 
 Linkerd gives you observability, reliability, and security
 for your microservices — with no code change required.
 
-![Version: 1.16.3](https://img.shields.io/badge/Version-1.16.3-informational?style=flat-square)
+![Version: 1.16.9](https://img.shields.io/badge/Version-1.16.9-informational?style=flat-square)
 ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 ![AppVersion: edge-XX.X.X](https://img.shields.io/badge/AppVersion-edge--XX.X.X-informational?style=flat-square)
 
@@ -152,6 +152,7 @@ Kubernetes: `>=1.21.0-0`
 | controlPlaneTracing | bool | `false` | enables control plane tracing |
 | controlPlaneTracingNamespace | string | `"linkerd-jaeger"` | namespace to send control plane traces to |
 | controllerImage | string | `"cr.l5d.io/linkerd/controller"` | Docker image for the destination and identity components |
+| controllerImageVersion | string | `""` | Optionally allow a specific container image Tag (or SHA) to be specified for the controllerImage. |
 | controllerLogFormat | string | `"plain"` | Log format for the control plane components |
 | controllerLogLevel | string | `"info"` | Log level for the control plane components |
 | controllerReplicas | int | `1` | Number of replicas for each control plane pod |
@@ -174,11 +175,15 @@ Kubernetes: `>=1.21.0-0`
 | identity.issuer.tls | object | `{"crtPEM":"","keyPEM":""}` | Which scheme is used for the identity issuer secret format |
 | identity.issuer.tls.crtPEM | string | `""` | Issuer certificate (ECDSA). It must be provided during install. |
 | identity.issuer.tls.keyPEM | string | `""` | Key for the issuer certificate (ECDSA). It must be provided during install |
+| identity.kubeAPI.clientBurst | int | `200` | Burst value over clientQPS |
+| identity.kubeAPI.clientQPS | int | `100` | Maximum QPS sent to the kube-apiserver before throttling. See [token bucket rate limiter implementation](https://github.com/kubernetes/client-go/blob/v12.0.0/util/flowcontrol/throttle.go) |
 | identity.serviceAccountTokenProjection | bool | `true` | Use [Service Account token Volume projection](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) for pod validation instead of the default token |
 | identityTrustAnchorsPEM | string | `""` | Trust root certificate (ECDSA). It must be provided during install. |
 | identityTrustDomain | string | clusterDomain | Trust domain used for identity |
 | imagePullPolicy | string | `"IfNotPresent"` | Docker image pull policy |
 | imagePullSecrets | list | `[]` | For Private docker registries, authentication is needed.  Registry secrets are applied to the respective service accounts |
+| kubeAPI.clientBurst | int | `200` | Burst value over clientQPS |
+| kubeAPI.clientQPS | int | `100` | Maximum QPS sent to the kube-apiserver before throttling. See [token bucket rate limiter implementation](https://github.com/kubernetes/client-go/blob/v12.0.0/util/flowcontrol/throttle.go) |
 | linkerdVersion | string | `"linkerdVersionValue"` | control plane version. See Proxy section for proxy version |
 | networkValidator.connectAddr | string | `"1.1.1.1:20001"` | Address to which the network-validator will attempt to connect. we expect this to be rewritten |
 | networkValidator.enableSecurityContext | bool | `true` | Include a securityContext in the network-validator pod spec |
@@ -226,6 +231,8 @@ Kubernetes: `>=1.21.0-0`
 | proxy.await | bool | `true` | If set, the application container will not start until the proxy is ready |
 | proxy.cores | int | `0` | The `cpu.limit` and `cores` should be kept in sync. The value of `cores` must be an integer and should typically be set by rounding up from the limit. E.g. if cpu.limit is '1500m', cores should be 2. |
 | proxy.defaultInboundPolicy | string | "all-unauthenticated" | The default allow policy to use when no `Server` selects a pod.  One of: "all-authenticated", "all-unauthenticated", "cluster-authenticated", "cluster-unauthenticated", "deny" |
+| proxy.disableInboundProtocolDetectTimeout | bool | `false` | When set to true, disables the protocol detection timeout on the inbound side of the proxy by setting it to a very high value |
+| proxy.disableOutboundProtocolDetectTimeout | bool | `false` | When set to true, disables the protocol detection timeout on the outbound side of the proxy by setting it to a very high value |
 | proxy.enableExternalProfiles | bool | `false` | Enable service profiles for non-Kubernetes services |
 | proxy.image.name | string | `"cr.l5d.io/linkerd/proxy"` | Docker image for the proxy |
 | proxy.image.pullPolicy | string | imagePullPolicy | Pull policy for the proxy container Docker image |
